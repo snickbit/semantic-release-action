@@ -1,0 +1,48 @@
+name: 'Semantic Release'
+description: 'Semantic Release workflow with npm, git, pnpm, and pre-release scripts'
+inputs:
+  GITHUB_TOKEN:  # GitHub PAT
+    description: 'GitHub Personal Access Token'
+    required: false
+  NPM_TOKEN:  # NPM Token
+    description: 'NPM Token'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ inputs.GITHUB_TOKEN }}
+
+    - uses: pnpm/action-setup@v2.2.2
+      with:
+        version: 7
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 'lts/*'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Build
+      run: pnpm run --if-present --loglevel error build
+
+    - name: Test
+      run: pnpm run --if-present --loglevel error test
+
+    - name: Docs
+      run: pnpm run --if-present --silent --no-bail docs
+
+    - name: Fix Styles
+      run: pnpm run --if-present --loglevel error fix
+
+    - name: Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ inputs.NPM_TOKEN }}
+      run: pnpm semantic-release
